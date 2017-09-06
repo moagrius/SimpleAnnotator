@@ -19,6 +19,9 @@ Annotator.prototype = {
    */
   options : null,
 
+  /**
+   * Wraps a text node in an element (options.tagName) with (options.className)
+   */
   highlightNode: function(node) {
     if (!this.shouldHighlightNode(node)) {
      return null;
@@ -30,6 +33,12 @@ Annotator.prototype = {
     return highlighted;
   },
 
+  /**
+   * Returns true if the node should be wrapped in a highlight dom via #highlightNode
+   * Checks if the node or it's parent is null, if the node is a text node,
+   * if the node is within an invalid container like <option> or <tr>,
+   * and that the node and it's adjacent siblings contain non-white content.
+   */
   shouldHighlightNode: function(node) {
     return (node != null)
      && (node.nodeType == Node.TEXT_NODE)
@@ -37,17 +46,29 @@ Annotator.prototype = {
      && (Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1)
      && !Annotator.IS_ONLY_WHITESPACE_REGEX.test(node.wholeText + node.nodeValue);
   },
-  
+
+  /**
+   * Replaces an element with it's text content, used to clear highlights.
+   * E.g., "<div>bob</div>" would become just "bob"
+   */
   clearHighlight : function(element) {
     var textNode = document.createTextNode(element.textContent);
     element.parentNode.replaceChild(textNode, element);
   },
-  
+
+  /**
+   * Removes all existing highlights from the options.rootNode,
+   * by calling #clearHighlight on all elements with options.tagName and options.className
+   */
   clearAll : function() {
-    var highlights = this.options.rootNode.getElementsByClassName(this.options.className);
+    var highlights = this.options.rootNode.querySelectorAll(this.options.tagName + '.' + this.options.className);
     Array.from(highlights).forEach(this.clearHighlight.bind(this));
   },
 
+  /**
+   * By passing an Annotation object, this will highlight all elements from the start and end positions,
+   * both described using XPath and character offsets.
+   */
   highlightAnnotation: function(annotation) {
 
     var startElement = this.findElementFromXpath(annotation.start);
@@ -65,7 +86,7 @@ Annotator.prototype = {
     nodesBetween.forEach(function(node){
       var highlighted = this.highlightNode(node);
       if (highlighted == null) {
-        return;
+        return true;
       }
       if (annotation.note) {
         highlighted.classList.add(this.options.noteClassName);
