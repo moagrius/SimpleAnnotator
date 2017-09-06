@@ -58,7 +58,6 @@ Annotator.prototype = {
 
     console.log('startElement: ' + startElement.nodeName + ', ' + startElement.nodeValue);
 
-    // TODO: makes sure these are TEXT nodes
     var startNodeAndOffset = this.getNodeFromOffset(startElement, annotation.startOffset);
     var startNode = startNodeAndOffset.node.splitText(startNodeAndOffset.offset);
 
@@ -136,12 +135,13 @@ Annotator.prototype = {
     var count = 0;
     var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
-      console.log('walking: ' + walker.currentNode.nodeValue);
-      var size = walker.currentNode.nodeValue.length;
+      var current = walker.currentNode;
+      console.log('walking: ' + current.nodeValue);
+      var size = current.nodeValue.length;
       count += size;
       if (count >= offset) {
         return {
-          node : walker.currentNode,
+          node : current,
           offset : size - (count - offset)
         };
       }
@@ -178,10 +178,9 @@ Annotator.prototype = {
     console.log(element);
     var tags = [];
     while (element != null && element != this.options.rootNode) {
-      var path = element.nodeName;
-      console.log('counting previous siblings of ' + path);
+      console.log('counting previous siblings of ' + element.nodeName);
       var index = this.getLikeSiblingIndex(element);
-      var component = path + Annotator.XPATH_INDEX_OPEN + index + Annotator.XPATH_INDEX_CLOSE;  // div[1]
+      var component = element.nodeName + Annotator.XPATH_INDEX_OPEN + index + Annotator.XPATH_INDEX_CLOSE;  // div[1]
       tags.unshift(component);
       console.log('moving up a level');
       element = element.parentElement;
@@ -198,11 +197,12 @@ Annotator.prototype = {
     var offset = 0;
     var walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
-      console.log('current node: ' + walker.currentNode.nodeName, walker.currentNode.nodeValue);
-      if (walker.currentNode == node || walker.currentNode.parentElement == node) {
+      var current = walker.currentNode;
+      console.log('current node: ' + current.nodeName, current.nodeValue);
+      if (current == node || current.parentElement == node) {
         break;
       }
-      offset += walker.currentNode.nodeValue.length;
+      offset += current.nodeValue.length;
     }
     return offset;
   },
@@ -212,7 +212,7 @@ Annotator.prototype = {
   */
   getHighlightAncestor: function(node) {
     console.log('getHighlightAncestor');
-    while (node && node != this.options.rootNode) {
+    while (node != null && node != this.options.rootNode) {
       if (node.nodeType == Node.ELEMENT_NODE && node.classList.contains(this.options.className)) {
         return node;
       }
