@@ -10,32 +10,30 @@ Annotator.PROHIBITED_PARENT_TAGS = ['ul', 'ol', 'option', 'select', 'table', 'tb
 
 Annotator.prototype = {
 
-  // tagName : tag name of element that a highlight wrapper will use
-  // className : class name the highlight wrapping element will use
-  // noteClassName : class name given to the wrapping element if there's a note
-  // leadClassName : class name given to the first element in a series representing one annotation
-  // rootNode : the top-most node xpath's should refer to
+  /**
+   * tagName : tag name of element that a highlight wrapper will use
+   * className : class name the highlight wrapping element will use
+   * noteClassName : class name given to the wrapping element if there's a note
+   * leadClassName : class name given to the first element in a series representing one annotation
+   * rootNode : the top-most node xpath's should refer to
+   */
   options : null,
 
   highlightNode: function(node) {
-    if (this.shouldHighlightNode(node)) {
-      console.log('should highlight this node, should not return null');
-      var highlighted = document.createElement(this.options.tagName);
-      console.log('highlighted: ' + highlighted.innerHTML);
-      highlighted.appendChild(document.createTextNode(node.nodeValue));
-      highlighted.classList.add(this.options.className);
-      node.parentNode.replaceChild(highlighted, node);
-      console.log('highlighted: ' + highlighted.innerHTML);
-      console.log('about to return a valid element...');
-      return highlighted;
+    if (!this.shouldHighlightNode(node)) {
+     return null;
     }
-    return null;
+    var highlighted = document.createElement(this.options.tagName);
+    highlighted.appendChild(document.createTextNode(node.nodeValue));
+    highlighted.classList.add(this.options.className);
+    node.parentNode.replaceChild(highlighted, node);
+    return highlighted;
   },
 
   shouldHighlightNode: function(node) {
     return (node != null)
-     && (node.parentNode != null)
      && (node.nodeType == Node.TEXT_NODE)
+     && (node.parentNode != null)
      && (Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1)
      && !Annotator.IS_ONLY_WHITESPACE_REGEX.test(node.wholeText + node.nodeValue);
   },
@@ -47,8 +45,7 @@ Annotator.prototype = {
   
   clearAll : function() {
     var highlights = this.options.rootNode.getElementsByClassName(this.options.className);
-    var clear = this.clearHighlight.bind(this);
-    Array.from(highlights).forEach(clear);
+    Array.from(highlights).forEach(this.clearHighlight.bind(this));
   },
 
   highlightAnnotation: function(annotation) {
@@ -56,29 +53,19 @@ Annotator.prototype = {
     var startElement = this.findElementFromXpath(annotation.start);
     var endElement = this.findElementFromXpath(annotation.end);
 
-    console.log('startElement: ' + startElement.nodeName + ', ' + startElement.nodeValue);
-
     var startNodeAndOffset = this.getNodeFromOffset(startElement, annotation.startOffset);
     var startNode = startNodeAndOffset.node.splitText(startNodeAndOffset.offset);
-
-    console.log('startNode: ' + startNode.nodeName + ', ' + startNode.nodeValue);
 
     var endNodeAndOffset = this.getNodeFromOffset(endElement, annotation.endOffset);
     var endNode = endNodeAndOffset.node.splitText(endNodeAndOffset.offset).previousSibling;
 
-    console.log('nodes');
-    console.log('startNode: ' + startNode.nodeName + ', ' + startNode.nodeValue);
-    console.log('endNode: ' + endNode.nodeName + ', ' + endNode.nodeValue);
     var nodesBetween = this.getTextNodesBetween(startNode, endNode);
     var dotted = false;  // only show the dot on the first of a series
-    console.log('about to iterate and wrap nodes between start and end');
-    for(var i = 0; i < nodesBetween.length; i++) {
-      var node = nodesBetween[i];
-      console.log('highlighting nodes between, iteration ' + i + ', ' + node.nodeValue);
+
+    nodesBetween.forEach(function(node){
       var highlighted = this.highlightNode(node);
       if (highlighted == null) {
-        console.log('highlighted is null, continuing');
-        continue;
+        return;
       }
       if (annotation.note) {
         highlighted.classList.add(this.options.noteClassName);
@@ -88,13 +75,10 @@ Annotator.prototype = {
         }
       }
       highlighted.annotation = annotation;
-    };
+    }, this);
   },
 
   getTextNodesBetween : function(start, end) {
-    console.log('getTextNodesBetween');
-    console.log('start: ' + start.nodeValue);
-    console.log('end:' + end.nodeValue);
     var collection = [];
     var walker = document.createTreeWalker(this.options.rootNode, NodeFilter.SHOW_TEXT);
     var collect = false;
@@ -136,7 +120,6 @@ Annotator.prototype = {
     var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       var current = walker.currentNode;
-      console.log('walking: ' + current.nodeValue);
       var size = current.nodeValue.length;
       count += size;
       if (count >= offset) {
@@ -171,18 +154,15 @@ Annotator.prototype = {
   },
 
   getXPath: function(element) {
-    console.log('getXPath');
     if (element.nodeType != Node.ELEMENT_NODE) {
       element = element.parentElement;
     }
     console.log(element);
     var tags = [];
     while (element != null && element != this.options.rootNode) {
-      console.log('counting previous siblings of ' + element.nodeName);
       var index = this.getLikeSiblingIndex(element);
       var component = element.nodeName + Annotator.XPATH_INDEX_OPEN + index + Annotator.XPATH_INDEX_CLOSE;  // div[1]
       tags.unshift(component);
-      console.log('moving up a level');
       element = element.parentElement;
     }
     return tags.join(Annotator.XPATH_DELIMITER);
@@ -192,13 +172,10 @@ Annotator.prototype = {
     if (arguments.length == 1) {
       parent = node.parentElement;
     }
-    console.log('getOffsetToNode');
-    console.log('node: ' + node.nodeValue);
     var offset = 0;
     var walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       var current = walker.currentNode;
-      console.log('current node: ' + current.nodeName, current.nodeValue);
       if (current == node || current.parentElement == node) {
         break;
       }
@@ -211,27 +188,24 @@ Annotator.prototype = {
   * get the first ancestor of the node that has the highlight class, or null
   */
   getHighlightAncestor: function(node) {
-    console.log('getHighlightAncestor');
     while (node != null && node != this.options.rootNode) {
       if (node.nodeType == Node.ELEMENT_NODE && node.classList.contains(this.options.className)) {
         return node;
       }
-      console.log('getHighlightAncestor, node is not root, move up parent');
       node = node.parentElement;
     }
     return null;
   },
 
-  // if the node is not in a highlight, return it
-  // otherwise return the first parent that is not a highlight
+  /**
+   * if the node is not in a highlight, return it
+   * otherwise return the first parent that is not a highlight
+   */
   getNormalizedParent: function(node) {
-    console.log('getNormalizedParent');
     var highlight = this.getHighlightAncestor(node);
     if (highlight == null) {
-      console.log('no highlight parent, return node');
       return node.nodeType == Node.ELEMENT_NODE ? node : node.parentElement;
     }
-    console.log('found a highlight ancestor for ' + node.nodeName);
     return this.getNormalizedParent(highlight.parentElement);
   },
 
@@ -244,25 +218,14 @@ Annotator.prototype = {
   */
   getAnnotationFromSelection: function(selection) {
     var startElement = this.getNormalizedParent(selection.anchorNode);
-    console.log('start element: ' + startElement.nodeName);
-    console.log('start node: ' + selection.anchorNode.nodeName);
-    console.log('find end element');
     var endElement = this.getNormalizedParent(selection.focusNode);
-    console.log('end element: ' + endElement.nodeName);
-    console.log('end node: ' + selection.focusNode.nodeName);
     var startOffset = selection.anchorOffset;
     var endOffset = selection.focusOffset;
     if (startElement != selection.anchorNode) {
-      console.log('start element different from anchor node, add offset');
-      var offset = this.getOffsetToNode(selection.anchorNode, startElement);
-      startOffset += offset;
-      console.log('adding ' + offset + ' for total ' + startOffset);
+      startOffset += this.getOffsetToNode(selection.anchorNode, startElement);
     }
     if (endElement != selection.focusNode) {
-      console.log('end element different from focus node, add offset');
-      var offset = this.getOffsetToNode(selection.focusNode, endElement);
-      endOffset += offset;
-      console.log('adding ' + offset + ' for total ' + endOffset);
+      endOffset += this.getOffsetToNode(selection.focusNode, endElement);
     }
     return {
       start: this.getXPath(startElement),
