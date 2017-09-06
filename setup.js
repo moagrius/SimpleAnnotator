@@ -1,4 +1,6 @@
+// this would likely be passed in from native code after fetching from server
 var annotations = [];
+// create an Annotator instance
 var annotator = new Annotator({
   tagName : 'span',
   className : 'highlight',
@@ -6,51 +8,27 @@ var annotator = new Annotator({
   leadClassName : 'first',
   rootNode : document.body
 });
-var selected = {};
+// this will hook into selection changes and react appropriately
+annotator.start();
+// we probably want to save annotations outside of the library
 var createAnnotation = function(note) {
   window.getSelection().empty();
-  var annotation = annotator.getAnnotationFromSelection(selected);
+  var annotation = annotator.getAnnotationFromSelection();
   if (note) {
     annotation.note = note;
   }
-  console.log(annotation);
   annotations.push(annotation);
   annotator.clearAll();
   annotations.forEach(function(annotation) {
     annotator.highlightAnnotation(annotation);
   });
 };
-document.addEventListener('selectionchange', function(e){
-
-  var selection = window.getSelection();
-
-  // check to make sure the start node is first in the dom, otherwise swap them
-  // if start and end are the same node, just check offset,
-  // otherwise we have to run through the DOM until we hit one
-  var inExpectedOrder = selection.anchorNode == selection.focusNode
-    ? selection.anchorOffset < selection.focusOffset
-    : annotator.nodeIsBefore(selection.anchorNode, selection.focusNode);
-  console.log('in expected order? ' + inExpectedOrder);
-  if (inExpectedOrder) {
-    selected.anchorNode = selection.anchorNode;
-    selected.focusNode = selection.focusNode;
-    selected.anchorOffset = selection.anchorOffset;
-    selected.focusOffset = selection.focusOffset;
-  } else {
-    selected.anchorNode = selection.focusNode;
-    selected.focusNode = selection.anchorNode;
-    selected.anchorOffset = selection.focusOffset;
-    selected.focusOffset = selection.anchorOffset;
-  }
-
-  console.log(selected);
-
-});
+// some UI behavior
 document.getElementById('create-annotation').addEventListener('click', function(e){
   createAnnotation();
 });
 document.getElementById('create-note').addEventListener('click', function(e){
-  var note = prompt("Note?", "");
+  var note = prompt('Note?', '');
   if (note) {
     createAnnotation(note);
   }

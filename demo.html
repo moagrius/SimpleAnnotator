@@ -143,10 +143,10 @@ var assert = function(a, b) {
     assert(xpath, 'DIV[1]/P[4]');
 })();
 
-// getNodeFromOffset
+// getNodeAndOffset
 (function(){
     var el = document.getElementById('offset-to-node');
-    var nodeAndOffset = annotator.getNodeFromOffset(el, 18);
+    var nodeAndOffset = annotator.getNodeAndOffset(el, 18);
     console.log('node at offset 18: ' + nodeAndOffset.node.textContent);
     assert(nodeAndOffset.node, document.getElementById('node-at-offset-18').firstChild);
     assert(nodeAndOffset.offset, 3);

@@ -1,7 +1,9 @@
 var Annotator = function(options) {
   this.options = options;
+  this.selection = {};
 };
 
+Annotator.SELECTION_CHANGE_EVENT_NAME = 'selectionchange';
 Annotator.IS_ONLY_WHITESPACE_REGEX = /^\s*$/;
 Annotator.XPATH_DELIMITER = '/';
 Annotator.XPATH_INDEX_OPEN = '[';
@@ -17,14 +19,19 @@ Annotator.prototype = {
    * leadClassName : class name given to the first element in a series representing one annotation
    * rootNode : the top-most node xpath's should refer to
    */
-  options : null,
+  options: null,
+
+  /**
+   * Reference to the last known selection object
+   */
+  selection: null,
 
   /**
    * Wraps a text node in an element (options.tagName) with (options.className)
    */
   highlightNode: function(node) {
     if (!this.shouldHighlightNode(node)) {
-     return null;
+      return null;
     }
     var highlighted = document.createElement(this.options.tagName);
     highlighted.appendChild(document.createTextNode(node.nodeValue));
@@ -40,18 +47,18 @@ Annotator.prototype = {
    * and that the node and it's adjacent siblings contain non-white content.
    */
   shouldHighlightNode: function(node) {
-    return (node != null)
-     && (node.nodeType == Node.TEXT_NODE)
-     && (node.parentNode != null)
-     && (Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1)
-     && !Annotator.IS_ONLY_WHITESPACE_REGEX.test(node.wholeText + node.nodeValue);
+    return (node != null) &&
+      (node.nodeType == Node.TEXT_NODE) &&
+      (node.parentNode != null) &&
+      (Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1) &&
+      !Annotator.IS_ONLY_WHITESPACE_REGEX.test(node.wholeText + node.nodeValue);
   },
 
   /**
    * Replaces an element with it's text content, used to clear highlights.
    * E.g., "<div>bob</div>" would become just "bob"
    */
-  clearHighlight : function(element) {
+  clearHighlight: function(element) {
     var textNode = document.createTextNode(element.textContent);
     element.parentNode.replaceChild(textNode, element);
   },
@@ -60,11 +67,11 @@ Annotator.prototype = {
    * Removes all existing highlights from the options.rootNode,
    * by calling #clearHighlight on all elements with options.tagName and options.className
    */
-  clearAll : function() {
+  clearAll: function() {
     var highlights = this.options.rootNode.querySelectorAll(this.options.tagName + '.' + this.options.className);
     Array.from(highlights).forEach(this.clearHighlight.bind(this));
   },
-  
+
   /**
    * By passing an Annotation object, this will highlight all elements from the start and end positions,
    * both described using XPath and character offsets.
@@ -74,15 +81,15 @@ Annotator.prototype = {
     var start = this.findElementFromXpath(annotation.start);
     start = this.getNodeAndOffset(start, annotation.startOffset);
     start = start.node.splitText(start.offset);
-    
+
     var end = this.findElementFromXpath(annotation.end);
     end = this.getNodeAndOffset(end, annotation.endOffset);
     end = end.node.splitText(end.offset).previousSibling;
 
     var between = this.getTextNodesBetween(start, end);
-    var dotted = false;  // only show the dot on the first of a series
+    var dotted = false; // only show the dot on the first of a series
 
-    between.forEach(function(node){
+    between.forEach(function(node) {
       var highlighted = this.highlightNode(node);
       if (highlighted == null) {
         return true;
@@ -101,7 +108,7 @@ Annotator.prototype = {
   /**
    * Given a node to start and end with, returns an array of all text nodes between.
    */
-  getTextNodesBetween : function(start, end) {
+  getTextNodesBetween: function(start, end) {
     var collection = [];
     var walker = document.createTreeWalker(this.options.rootNode, NodeFilter.SHOW_TEXT);
     var collect = false;
@@ -126,7 +133,7 @@ Annotator.prototype = {
    * Returns true if the node represented by parameter "a" is earlier in the DOM
    * than the node represented by parameter "b"
    */
-  nodeIsBefore : function(a, b) {
+  nodeIsBefore: function(a, b) {
     var walker = document.createTreeWalker(this.options.rootNode);
     while (walker.nextNode()) {
       var current = walker.currentNode;
@@ -161,8 +168,8 @@ Annotator.prototype = {
       count += size;
       if (count >= offset) {
         return {
-          node : current,
-          offset : size - (count - offset)
+          node: current,
+          offset: size - (count - offset)
         };
       }
     }
@@ -210,7 +217,7 @@ Annotator.prototype = {
     var tags = [];
     while (element != null && element != this.options.rootNode) {
       var index = this.getLikeSiblingIndex(element);
-      var component = element.nodeName + Annotator.XPATH_INDEX_OPEN + index + Annotator.XPATH_INDEX_CLOSE;  // div[1]
+      var component = element.nodeName + Annotator.XPATH_INDEX_OPEN + index + Annotator.XPATH_INDEX_CLOSE; // div[1]
       tags.unshift(component);
       element = element.parentElement;
     }
@@ -262,23 +269,22 @@ Annotator.prototype = {
     return this.getNormalizedParent(highlight.parentElement);
   },
 
-
   /**
    * Selection gives us anchor/focusNode and anchor/focusOffset,
    * which are really nice indicators of where the selection is.  Unfortunately,
    * these need to persist, so we use the parent element of each node as xpath,
    * and have to add the number of characters to the offset that leads to the node
    */
-  getAnnotationFromSelection: function(selection) {
-    var startElement = this.getNormalizedParent(selection.anchorNode);
-    var endElement = this.getNormalizedParent(selection.focusNode);
-    var startOffset = selection.anchorOffset;
-    var endOffset = selection.focusOffset;
-    if (startElement != selection.anchorNode) {
-      startOffset += this.getOffsetToNode(selection.anchorNode, startElement);
+  getAnnotationFromSelection: function() {
+    var startElement = this.getNormalizedParent(this.selection.anchorNode);
+    var endElement = this.getNormalizedParent(this.selection.focusNode);
+    var startOffset = this.selection.anchorOffset;
+    var endOffset = this.selection.focusOffset;
+    if (startElement != this.selection.anchorNode) {
+      startOffset += this.getOffsetToNode(this.selection.anchorNode, startElement);
     }
-    if (endElement != selection.focusNode) {
-      endOffset += this.getOffsetToNode(selection.focusNode, endElement);
+    if (endElement != this.selection.focusNode) {
+      endOffset += this.getOffsetToNode(this.selection.focusNode, endElement);
     }
     return {
       start: this.getXPath(startElement),
@@ -286,6 +292,40 @@ Annotator.prototype = {
       end: this.getXPath(endElement),
       endOffset: endOffset
     };
+  },
+
+  /**
+   * When the current selection changes, normalize and save that information.
+   * This is helpful when, for example, a click to initiate an annotation action
+   * might clear the current selection before the operation completes.
+   */
+  onSelectionChange: function(e) {
+
+    var user = window.getSelection();
+
+    // check to make sure the start node is first in the dom, otherwise swap them
+    // if start and end are the same node, just check offset,
+    // otherwise we have to run through the DOM until we hit one
+    var inExpectedOrder = user.anchorNode == user.focusNode ?
+      user.anchorOffset < user.focusOffset :
+      annotator.nodeIsBefore(user.anchorNode, user.focusNode);
+
+    if (inExpectedOrder) {
+      this.selection.anchorNode = user.anchorNode;
+      this.selection.focusNode = user.focusNode;
+      this.selection.anchorOffset = user.anchorOffset;
+      this.selection.focusOffset = user.focusOffset;
+    } else {
+      this.selection.anchorNode = user.focusNode;
+      this.selection.focusNode = user.anchorNode;
+      this.selection.anchorOffset = user.focusOffset;
+      this.selection.focusOffset = user.anchorOffset;
+    }
+
+  },
+
+  start: function() {
+    document.addEventListener(Annotator.SELECTION_CHANGE_EVENT_NAME, this.onSelectionChange.bind(this));
   }
 
 };
