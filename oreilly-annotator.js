@@ -19,19 +19,63 @@ Annotator.prototype = {
 
   highlightNode: function(node) {
     if (this.shouldHighlightNode(node)) {
+      console.log('should highlight this node, should not return null');
       var highlighted = document.createElement(this.options.tagName);
+      console.log('highlighted: ' + highlighted.innerHTML);
       highlighted.appendChild(document.createTextNode(node.nodeValue));
       highlighted.classList.add(this.options.className);
       node.parentNode.replaceChild(highlighted, node);
+      console.log('highlighted: ' + highlighted.innerHTML);
+      console.log('about to return a valid element...');
       return highlighted;
     }
+    // debug block
+    console.log('made it here, what failed?');
+    console.log('node? ' + node);
+    console.log('node.parentNode? ' + node.parentNode);
+    console.log('nodeType? ' + node.nodeType);
+    console.log('node is not null? ' + (node != null));
+    console.log('has a parent? ' + (node.parentNode != null));
+    console.log('is a text node? ' + (node.nodeType == Node.TEXT_NODE));
+    console.log('valid container? ' + (Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1));
+    console.log('has non white? ' + Annotator.HAS_NON_WHITE_REGEX.test(node.wholeText + node.nodeValue));
+
     return null;
   },
 
+  // this is failing...  write out with logs
+  /*
   shouldHighlightNode: function(node) {
-    return node && node.parentNode && node.nodeType == Node.TEXT_NODE
-     && Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1
+    return (node != null)
+     && (node.parentNode != null)
+     && (node.nodeType == Node.TEXT_NODE)
+     && (Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1)
      && Annotator.HAS_NON_WHITE_REGEX.test(node.wholeText + node.nodeValue);
+  },
+  */
+
+  shouldHighlightNode: function(node) {
+    if (node == null) {
+      console.log('node is null');
+      return false;
+    }
+    if (node.parentNode == null) {
+      console.log('parent is null');
+      return false;
+    }
+    if (node.nodeType != Node.TEXT_NODE) {
+      console.log('node is not a text node');
+      return false;
+    }
+    if (Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) != -1) {
+      console.log('is in invalid container');
+      return false;
+    }
+    if (!Annotator.HAS_NON_WHITE_REGEX.test(node.wholeText + node.nodeValue)) {
+      console.log('has only whitespace');
+      return false;
+    }
+    return true;
   },
   
   clearHighlight : function(element) {
@@ -68,10 +112,11 @@ Annotator.prototype = {
     var dotted = false;  // only show the dot on the first of a series
     console.log('about to iterate and wrap nodes between start and end');
     for(var i = 0; i < nodesBetween.length; i++) {
-      console.log('highlighting nodes between, iteration ' + i);
       var node = nodesBetween[i];
+      console.log('highlighting nodes between, iteration ' + i + ', ' + node.nodeValue);
       var highlighted = this.highlightNode(node);
       if (highlighted == null) {
+        console.log('highlighted is null, continuing');
         continue;
       }
       if (annotation.note) {
