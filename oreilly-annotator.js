@@ -2,9 +2,11 @@ var Annotator = function(options) {
   this.options = options;
 };
 
+Annotator.HAS_NON_WHITE_REGEX = /\S/g;
 Annotator.XPATH_DELIMITER = '/';
 Annotator.XPATH_INDEX_OPEN = '[';
 Annotator.XPATH_INDEX_CLOSE = ']';
+Annotator.PROHIBITED_PARENT_TAGS = ['ul', 'ol', 'option', 'select', 'table', 'tbody', 'thead', 'tr'];
 
 Annotator.prototype = {
 
@@ -16,7 +18,7 @@ Annotator.prototype = {
   options : null,
 
   highlightNode: function(node) {
-    if (node && node.parentNode) {
+    if (this.shouldHighlightNode(node)) {
       var highlighted = document.createElement(this.options.tagName);
       highlighted.appendChild(document.createTextNode(node.nodeValue));
       highlighted.classList.add(this.options.className);
@@ -24,6 +26,12 @@ Annotator.prototype = {
       return highlighted;
     }
     return null;
+  },
+
+  shouldHighlightNode: function(node) {
+    return node && node.parentNode && node.nodeType == Node.TEXT_NODE
+     && Annotator.PROHIBITED_PARENT_TAGS.indexOf(node.parentNode.nodeName) == -1
+     && Annotator.HAS_NON_WHITE_REGEX.test(node.wholeText + node.nodeValue);
   },
   
   clearHighlight : function(element) {
@@ -63,6 +71,9 @@ Annotator.prototype = {
       console.log('highlighting nodes between, iteration ' + i);
       var node = nodesBetween[i];
       var highlighted = this.highlightNode(node);
+      if (highlighted == null) {
+        continue;
+      }
       if (annotation.note) {
         highlighted.classList.add(this.options.noteClassName);
         if (!dotted) {

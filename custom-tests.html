@@ -8,7 +8,7 @@
         }
         .highlight {
           background: rgba(255,255,0,0.5);
-          border: 1px solid red;
+          outline: 1px solid red;
           position: relative;
         }
         .highlight.first.note:before {
@@ -26,6 +26,42 @@
 <div id="container">
     <p id="simple">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
     <p id="complex">AB<span class="highlight" id="first-complex-highlight">CDE</span>FGHIJKLMNOPQRSTUVWXYZ</p>
+    <div id="highly-complex">
+        ABCDEFGHIJKLMNOPQRSTUVWXYZ
+        <pre>{ json! }</pre>
+        <span>ABCDEFGHIJKLMNOPQRSTUV<strong>WXYZ</strong></span>
+        <table>
+            <thead>
+              <tr>
+                  <th>A</th>
+                  <th>B</th>
+              </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <ul>
+                            <li>Bullet 1</li>
+                            <li>Bullet 2</li>
+                            <li>Bullet <strong>3</strong></li>
+                        </ul>
+                    </td>
+                    <td>
+                        <form>
+                            <select>
+                                <option>Hi there</option>
+                            </select>
+                            <input type="submit" value="Submit!" />
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <img src="data:image/gif;base64,R0lGODlhEAAQAMQAAORHHOVSKudfOulrSOp3WOyDZu6QdvCchPGolfO0o/XBs/fNwfjZ0frl3/zy7////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAkAABAALAAAAAAQABAAAAVVICSOZGlCQAosJ6mu7fiyZeKqNKToQGDsM8hBADgUXoGAiqhSvp5QAnQKGIgUhwFUYLCVDFCrKUE1lBavAViFIDlTImbKC5Gm2hB0SlBCBMQiB0UjIQA7" />
+        <hr />
+        Words...<br />
+        <hr />
+    </div>
     <p id="offset-to-node">01234<span>56789<span>ABCDE</span></span><span id="node-at-offset-18">FGHIJ</span></p>
     <p id="non-highlight-parent">
         <span class="highlight">
